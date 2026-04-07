@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <!-- book cover -->
+  <rect x="3" y="5" width="26" height="23" rx="2" fill="#292524"/>
+  <!-- left page -->
+  <path d="M5 7 L15.5 7 L15.5 26 Q10 24.5 5 25.5 Z" fill="#fafaf9"/>
+  <!-- right page -->
+  <path d="M16.5 7 L27 7 L27 25.5 Q22 24.5 16.5 26 Z" fill="#fafaf9"/>
+  <!-- cross on left page -->
+  <line x1="10.25" y1="11" x2="10.25" y2="22" stroke="#292524" stroke-width="1.8" stroke-linecap="round"/>
+  <line x1="7" y1="14.5" x2="13.5" y2="14.5" stroke="#292524" stroke-width="1.8" stroke-linecap="round"/>
+  <!-- text lines on right page -->
+  <line x1="19" y1="12" x2="25" y2="12" stroke="#a8a29e" stroke-width="1" stroke-linecap="round"/>
+  <line x1="19" y1="15" x2="24" y2="15" stroke="#a8a29e" stroke-width="1" stroke-linecap="round"/>
+  <line x1="19" y1="18" x2="25" y2="18" stroke="#a8a29e" stroke-width="1" stroke-linecap="round"/>
+  <line x1="19" y1="21" x2="23" y2="21" stroke="#a8a29e" stroke-width="1" stroke-linecap="round"/>
+</svg>
