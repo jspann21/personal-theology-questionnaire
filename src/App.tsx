@@ -31,11 +31,13 @@ import {
   SheetTrigger,
 } from "./components/ui/sheet";
 import { cn } from "./lib/utils";
+import { normalizeVerseTranslation, type VerseTranslationCode } from "./verse-translations";
 
 const ANSWERS_STORAGE_KEY = "theology-answers";
 const NOTES_STORAGE_KEY = "theology-notes";
 const DOCUMENT_STORAGE_KEY = "theology-document-draft";
 const FORMAT_STORAGE_KEY = "theology-document-format";
+const VERSE_TRANSLATION_STORAGE_KEY = "theology-verse-translation";
 
 const slugify = (text: string) => text.toLowerCase().replace(/[^a-z0-9]+/g, "-");
 
@@ -108,6 +110,9 @@ export default function App() {
     const saved = localStorage.getItem(FORMAT_STORAGE_KEY);
     return normalizeDocumentFormat(saved);
   });
+  const [verseTranslation, setVerseTranslation] = useState<VerseTranslationCode>(() =>
+    normalizeVerseTranslation(localStorage.getItem(VERSE_TRANSLATION_STORAGE_KEY)),
+  );
 
   useEffect(() => {
     localStorage.setItem(ANSWERS_STORAGE_KEY, JSON.stringify(answers));
@@ -129,6 +134,10 @@ export default function App() {
   useEffect(() => {
     localStorage.setItem(FORMAT_STORAGE_KEY, selectedFormat);
   }, [selectedFormat]);
+
+  useEffect(() => {
+    localStorage.setItem(VERSE_TRANSLATION_STORAGE_KEY, verseTranslation);
+  }, [verseTranslation]);
 
   useEffect(() => {
     const syncView = () => {
@@ -503,6 +512,8 @@ export default function App() {
                           question={question}
                           answer={answers[question.id]}
                           notes={notes[question.id] || ""}
+                          verseTranslation={verseTranslation}
+                          onVerseTranslationChange={setVerseTranslation}
                           onAnswerChange={(value) => handleAnswerChange(question.id, value)}
                           onNotesChange={(value) => handleNotesChange(question.id, value)}
                         />

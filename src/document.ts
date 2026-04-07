@@ -4,6 +4,7 @@ import { QUESTION_STATEMENTS, SECTION_BLUEPRINTS } from "./document-config";
 import { assertValidDocumentConfiguration } from "./document-schema";
 import type { GeneratedVerse } from "./document-types";
 import { dedupe, normalizeWhitespace } from "./document-utils";
+import { DEFAULT_VERSE_TRANSLATION, normalizeVerseTranslation, type VerseTranslationCode } from "./verse-translations";
 
 type VerseCacheRecord = Record<string, GeneratedVerse>;
 
@@ -52,7 +53,6 @@ type ChapterVerse = {
 type ChapterResponse = ChapterVerse[];
 
 const VERSE_CACHE_STORAGE_KEY = "theology-verse-cache";
-export const DEFAULT_VERSE_TRANSLATION = "ESV";
 const VERSE_FETCH_TIMEOUT_MS = 10000;
 
 const BOOK_ALIASES: Array<{ id: number; names: string[]; singleChapter?: boolean }> = [
@@ -156,8 +156,8 @@ function setVerseCache(cache: VerseCacheRecord) {
   window.localStorage.setItem(VERSE_CACHE_STORAGE_KEY, JSON.stringify(cache));
 }
 
-function getVerseCacheKey(reference: string) {
-  return reference;
+function getVerseCacheKey(reference: string, translation: VerseTranslationCode) {
+  return `${translation}:${reference}`;
 }
 
 function cleanVerseText(text: string) {
@@ -200,12 +200,17 @@ function parseVerseNumbers(verseSpec: string) {
   return verses;
 }
 
-function getChapterKey(bookId: number, chapter: number) {
-  return `${bookId}:${chapter}`;
+function getChapterKey(bookId: number, chapter: number, translation: VerseTranslationCode) {
+  return `${translation}:${bookId}:${chapter}`;
 }
 
-async function fetchChapter(bookId: number, chapter: number, chapterCache: Map<string, Promise<ChapterResponse>>) {
-  const key = getChapterKey(bookId, chapter);
+async function fetchChapter(
+  bookId: number,
+  chapter: number,
+  translation: VerseTranslationCode,
+  chapterCache: Map<string, Promise<ChapterResponse>>,
+) {
+  const key = getChapterKey(bookId, chapter, translation);
 
   if (!chapterCache.has(key)) {
     const controller = new AbortController();
@@ -213,7 +218,7 @@ async function fetchChapter(bookId: number, chapter: number, chapterCache: Map<s
 
     chapterCache.set(
       key,
-      fetch(`https://bolls.life/get-text/${DEFAULT_VERSE_TRANSLATION}/${bookId}/${chapter}/`, {
+      fetch(`https://bolls.life/get-text/${translation}/${bookId}/${chapter}/`, {
         credentials: "omit",
         referrerPolicy: "no-referrer",
         signal: controller.signal,
@@ -236,14 +241,18 @@ async function fetchChapter(bookId: number, chapter: number, chapterCache: Map<s
   return chapterCache.get(key)!;
 }
 
-async function resolveViaChapterData(parsed: ParsedReference, chapterCache: Map<string, Promise<ChapterResponse>>) {
+async function resolveViaChapterData(
+  parsed: ParsedReference,
+  translation: VerseTranslationCode,
+  chapterCache: Map<string, Promise<ChapterResponse>>,
+) {
   if (parsed.kind === "chapter") {
-    const chapter = await fetchChapter(parsed.bookId, parsed.chapter, chapterCache);
+    const chapter = await fetchChapter(parsed.bookId, parsed.chapter, translation, chapterCache);
     return cleanVerseText(chapter.map((verse) => verse.text).join(" "));
   }
 
   if (parsed.kind === "verses") {
-    const chapter = await fetchChapter(parsed.bookId, parsed.chapter, chapterCache);
+    const chapter = await fetchChapter(parsed.bookId, parsed.chapter, translation, chapterCache);
     const verseNumbers = parseVerseNumbers(parsed.verseSpec);
     const verses = chapter.filter((verse) => verseNumbers.has(verse.verse));
     return cleanVerseText(verses.map((verse) => verse.text).join(" "));
@@ -252,7 +261,7 @@ async function resolveViaChapterData(parsed: ParsedReference, chapterCache: Map<
   if (parsed.kind === "chapterRange") {
     const chapters = await Promise.all(
       Array.from({ length: parsed.endChapter - parsed.startChapter + 1 }, (_, index) =>
-        fetchChapter(parsed.bookId, parsed.startChapter + index, chapterCache),
+        fetchChapter(parsed.bookId, parsed.startChapter + index, translation, chapterCache),
       ),
     );
     return cleanVerseText(chapters.flatMap((chapter) => chapter).map((verse) => verse.text).join(" "));
@@ -260,7 +269,7 @@ async function resolveViaChapterData(parsed: ParsedReference, chapterCache: Map<
 
   const chapters = await Promise.all(
     Array.from({ length: parsed.endChapter - parsed.startChapter + 1 }, (_, index) =>
-      fetchChapter(parsed.bookId, parsed.startChapter + index, chapterCache),
+      fetchChapter(parsed.bookId, parsed.startChapter + index, translation, chapterCache),
     ),
   );
   const startVerses = parseVerseNumbers(parsed.startVerseSpec);
@@ -371,12 +380,16 @@ function parseReference(reference: string): ParsedReference | null {
   return null;
 }
 
-async function resolveSingleReference(reference: string, chapterCache: Map<string, Promise<ChapterResponse>>) {
+async function resolveSingleReference(
+  reference: string,
+  translation: VerseTranslationCode,
+  chapterCache: Map<string, Promise<ChapterResponse>>,
+) {
   const parsed = parseReference(reference);
 
   if (parsed) {
     try {
-      const text = await resolveViaChapterData(parsed, chapterCache);
+      const text = await resolveViaChapterData(parsed, translation, chapterCache);
       if (text) {
         return {
           reference,
@@ -412,27 +425,28 @@ async function runInBatches<TInput, TOutput>(
   return results;
 }
 
-export async function resolveVerseTexts(references: string[]) {
+export async function resolveVerseTexts(references: string[], translation = DEFAULT_VERSE_TRANSLATION) {
+  const normalizedTranslation = normalizeVerseTranslation(translation);
   const dedupedReferences = dedupe(references);
   const cache = getVerseCache();
   const chapterCache = new Map<string, Promise<ChapterResponse>>();
   const result: Record<string, GeneratedVerse> = {};
   const missing = dedupedReferences.filter((reference) => {
-    const cached = cache[getVerseCacheKey(reference)];
+    const cached = cache[getVerseCacheKey(reference, normalizedTranslation)];
     if (cached?.status === "resolved") {
       result[reference] = cached;
       return false;
     }
     if (cached) {
-      delete cache[getVerseCacheKey(reference)];
+      delete cache[getVerseCacheKey(reference, normalizedTranslation)];
     }
     return true;
   });
 
   const resolved = await runInBatches(missing, 4, async (reference) => {
-    const verse = await resolveSingleReference(reference, chapterCache);
+    const verse = await resolveSingleReference(reference, normalizedTranslation, chapterCache);
     if (verse.status === "resolved") {
-      cache[getVerseCacheKey(reference)] = verse;
+      cache[getVerseCacheKey(reference, normalizedTranslation)] = verse;
     }
     result[reference] = verse;
     return verse;
@@ -450,3 +464,4 @@ assertValidDocumentConfiguration(workbook, SECTION_BLUEPRINTS, QUESTION_STATEMEN
 export { GENERATED_DOCUMENT_TITLE, normalizeDocumentFormat, normalizeGeneratedDocumentTitle } from "./document-core";
 export * from "./document-generation";
 export * from "./document-types";
+export * from "./verse-translations";

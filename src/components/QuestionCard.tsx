@@ -7,16 +7,19 @@ import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
+import type { VerseTranslationCode } from "@/verse-translations";
 
 interface QuestionCardProps {
   question: Question;
   answer: "yes" | "no" | undefined;
   notes: string;
+  verseTranslation: VerseTranslationCode;
+  onVerseTranslationChange: (translation: VerseTranslationCode) => void;
   onAnswerChange: (answer: "yes" | "no") => void;
   onNotesChange: (notes: string) => void;
 }
 
-export function QuestionCard({ question, answer, notes, onAnswerChange, onNotesChange }: QuestionCardProps) {
+export function QuestionCard({ question, answer, notes, verseTranslation, onVerseTranslationChange, onAnswerChange, onNotesChange }: QuestionCardProps) {
   return (
     <Card className="mb-8 border-slate-200 shadow-sm">
       <CardHeader className="pb-4">
@@ -57,7 +60,7 @@ export function QuestionCard({ question, answer, notes, onAnswerChange, onNotesC
                 </span>
                 {question.yes.proofTexts.map((reference, index) => (
                   <span key={reference} className="inline-flex items-center">
-                    <VersePopover reference={reference} />
+                    <VersePopover reference={reference} translation={verseTranslation} onTranslationChange={onVerseTranslationChange} />
                     {index < question.yes.proofTexts.length - 1 && <span className="ml-1 text-slate-400">,</span>}
                   </span>
                 ))}
@@ -81,7 +84,7 @@ export function QuestionCard({ question, answer, notes, onAnswerChange, onNotesC
                 </span>
                 {question.no.proofTexts.map((reference, index) => (
                   <span key={reference} className="inline-flex items-center">
-                    <VersePopover reference={reference} />
+                    <VersePopover reference={reference} translation={verseTranslation} onTranslationChange={onVerseTranslationChange} />
                     {index < question.no.proofTexts.length - 1 && <span className="ml-1 text-slate-400">,</span>}
                   </span>
                 ))}
