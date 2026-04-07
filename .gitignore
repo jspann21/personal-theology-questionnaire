@@ -1,0 +1,10 @@
+.vite/
+dist/
+node_modules/
+build/
+coverage/
+.DS_Store
+*.log
+.env*
+!.env.example
+.vscode/settings.json

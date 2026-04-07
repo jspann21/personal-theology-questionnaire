@@ -1,0 +1,13 @@
+packages:
+  - .
+
+# Delay newly published packages for 7 days to reduce exposure to fresh supply-chain compromises.
+minimumReleaseAge: 10080
+
+# Fail installs if a package's trust evidence regresses relative to earlier releases.
+trustPolicy: no-downgrade
+
+# Only allow direct dependencies to use exotic sources like git URLs or tarballs.
+blockExoticSubdeps: true
+
+# Add overrides only for confirmed advisories that require pinning a transitive dependency.
