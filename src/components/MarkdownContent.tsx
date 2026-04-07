@@ -5,6 +5,32 @@ interface MarkdownContentProps {
   className?: string;
 }
 
+function getSafeHref(href: string) {
+  const trimmed = href.trim();
+
+  if (!trimmed) {
+    return null;
+  }
+
+  if (trimmed.startsWith("#")) {
+    return trimmed;
+  }
+
+  if (/^(https?:|mailto:)/i.test(trimmed)) {
+    return trimmed;
+  }
+
+  if (/^[a-z][a-z0-9+.-]*:/i.test(trimmed)) {
+    return null;
+  }
+
+  return trimmed;
+}
+
+function isExternalHref(href: string) {
+  return /^(https?:|mailto:)/i.test(href);
+}
+
 function renderInline(text: string) {
   const parts = text.split(/(`[^`]+`|\[[^\]]+\]\([^)]+\))/g);
 
@@ -24,8 +50,19 @@ function renderInline(text: string) {
     const linkMatch = part.match(/^\[([^\]]+)\]\(([^)]+)\)$/);
 
     if (linkMatch) {
+      const safeHref = getSafeHref(linkMatch[2]);
+
+      if (!safeHref) {
+        return <Fragment key={index}>{linkMatch[1]}</Fragment>;
+      }
+
       return (
-        <a key={index} href={linkMatch[2]} className="font-medium text-blue-700 underline underline-offset-2">
+        <a
+          key={index}
+          href={safeHref}
+          className="font-medium text-blue-700 underline underline-offset-2"
+          rel={isExternalHref(safeHref) ? "noreferrer noopener" : undefined}
+        >
           {linkMatch[1]}
         </a>
       );

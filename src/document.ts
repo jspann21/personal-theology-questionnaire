@@ -53,6 +53,7 @@ type ChapterResponse = ChapterVerse[];
 
 const VERSE_CACHE_STORAGE_KEY = "theology-verse-cache";
 export const DEFAULT_VERSE_TRANSLATION = "ESV";
+const VERSE_FETCH_TIMEOUT_MS = 10000;
 
 const BOOK_ALIASES: Array<{ id: number; names: string[]; singleChapter?: boolean }> = [
   { id: 1, names: ["Genesis"] },
@@ -207,16 +208,25 @@ async function fetchChapter(bookId: number, chapter: number, chapterCache: Map<s
   const key = getChapterKey(bookId, chapter);
 
   if (!chapterCache.has(key)) {
+    const controller = new AbortController();
+    const timeoutId = window.setTimeout(() => controller.abort(), VERSE_FETCH_TIMEOUT_MS);
+
     chapterCache.set(
       key,
-      fetch(`https://bolls.life/get-text/${DEFAULT_VERSE_TRANSLATION}/${bookId}/${chapter}/`)
+      fetch(`https://bolls.life/get-text/${DEFAULT_VERSE_TRANSLATION}/${bookId}/${chapter}/`, {
+        credentials: "omit",
+        referrerPolicy: "no-referrer",
+        signal: controller.signal,
+      })
         .then((response) => {
+          window.clearTimeout(timeoutId);
           if (!response.ok) {
             throw new Error(`Failed chapter lookup for ${bookId} ${chapter}`);
           }
           return response.json() as Promise<ChapterResponse>;
         })
         .catch((error) => {
+          window.clearTimeout(timeoutId);
           chapterCache.delete(key);
           throw error;
         }),

@@ -115,6 +115,10 @@ function isExternalLink(target) {
   return /^(?:[a-z]+:)?\/\//i.test(target) || /^[a-z]+:/i.test(target);
 }
 
+function isAllowedExternalLink(target) {
+  return /^(https?:|mailto:)/i.test(target);
+}
+
 function normalizeLinkTarget(target) {
   const [pathWithoutAnchor] = target.split("#", 1);
   const [pathWithoutQuery] = pathWithoutAnchor.split("?", 1);
@@ -130,7 +134,16 @@ async function validateMarkdownLinks(errors) {
     for (const match of markdown.matchAll(localMarkdownLinkPattern)) {
       const target = match[1].trim();
 
-      if (!target || target.startsWith("#") || isExternalLink(target)) {
+      if (!target || target.startsWith("#")) {
+        continue;
+      }
+
+      if (isExternalLink(target)) {
+        if (!isAllowedExternalLink(target)) {
+          errors.push(
+            `Disallowed markdown link scheme in ${path.relative(repositoryRoot, filePath)}: ${target}`,
+          );
+        }
         continue;
       }
 
