@@ -125,6 +125,14 @@ function normalizeLinkTarget(target) {
   return decodeURIComponent(pathWithoutQuery.trim());
 }
 
+function resolveLocalLinkPath(filePath, normalizedTarget) {
+  if (normalizedTarget.startsWith("/")) {
+    return path.join(repositoryRoot, normalizedTarget.slice(1));
+  }
+
+  return path.resolve(path.dirname(filePath), normalizedTarget);
+}
+
 async function validateMarkdownLinks(errors) {
   const markdownFiles = await collectMarkdownFiles(repositoryRoot);
 
@@ -153,7 +161,7 @@ async function validateMarkdownLinks(errors) {
         continue;
       }
 
-      const resolvedPath = path.resolve(path.dirname(filePath), normalizedTarget);
+      const resolvedPath = resolveLocalLinkPath(filePath, normalizedTarget);
 
       if (!existsSync(resolvedPath)) {
         errors.push(
