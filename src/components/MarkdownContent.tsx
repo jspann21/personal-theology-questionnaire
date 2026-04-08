@@ -5,6 +5,18 @@ interface MarkdownContentProps {
   className?: string;
 }
 
+const APP_BASE_URL = import.meta.env.BASE_URL;
+
+function withBasePath(pathname: string) {
+  const normalizedBase = APP_BASE_URL.endsWith("/") ? APP_BASE_URL.slice(0, -1) : APP_BASE_URL;
+
+  if (!normalizedBase) {
+    return pathname;
+  }
+
+  return `${normalizedBase}${pathname}`;
+}
+
 function getSafeHref(href: string) {
   const trimmed = href.trim();
 
@@ -14,6 +26,10 @@ function getSafeHref(href: string) {
 
   if (trimmed.startsWith("#")) {
     return trimmed;
+  }
+
+  if (trimmed.startsWith("/") && !trimmed.startsWith("//")) {
+    return withBasePath(trimmed);
   }
 
   if (/^(https?:|mailto:)/i.test(trimmed)) {

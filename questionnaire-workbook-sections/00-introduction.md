@@ -34,7 +34,7 @@ The immediate goal is not to force a person into a label, but to help that perso
 
 7. Use your completed answers with the companion personal theology build guide to draft a fuller personal theology document.
 
-If you want to preview the generated end result before filling out the workbook, see the static sample report page in the repository at [sample-report.html](../sample-report.html).
+If you want to preview the generated end result before filling out the workbook, see the static sample report page at [sample-report.html](/sample-report.html).
 
 ## Standards For Careful Use
 
