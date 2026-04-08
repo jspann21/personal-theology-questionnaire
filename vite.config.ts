@@ -19,6 +19,14 @@ function resolvePagesBasePath() {
 
 export default defineConfig(({ command }) => ({
   base: command === "build" ? resolvePagesBasePath() : "/",
+  build: {
+    rollupOptions: {
+      input: {
+        main: path.resolve(__dirname, "index.html"),
+        sampleReport: path.resolve(__dirname, "sample-report.html"),
+      },
+    },
+  },
   plugins: [react(), tailwindcss()],
   resolve: {
     alias: {
