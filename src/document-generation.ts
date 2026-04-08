@@ -1,7 +1,7 @@
 import { questions, type AnswerOption, type Question } from "./data";
-import { GENERATED_DOCUMENT_TITLE, normalizeGeneratedDocumentTitle } from "./document-core";
+import { DEFAULT_DOCUMENT_OPTIONS, GENERATED_DOCUMENT_TITLE, normalizeDocumentOptions, normalizeGeneratedDocumentTitle } from "./document-core";
 import { QUESTION_STATEMENTS, SECTION_BLUEPRINTS, type SectionBlueprint, type SectionGroupBlueprint } from "./document-config";
-import type { AnswerValue, AnswersMap, DocumentFormat, GeneratedDocument, NotesMap } from "./document-types";
+import type { AnswerValue, AnswersMap, DocumentFormat, DocumentOptions, GeneratedDocument, NotesMap } from "./document-types";
 import { dedupe, ensureSentence } from "./document-utils";
 
 const QUESTION_LOOKUP = new Map(questions.map((question) => [question.id, question]));
@@ -124,10 +124,10 @@ function appendParentheticalReferences(text: string, referenceText: string) {
   return `${content} (${referenceText})${punctuation}`;
 }
 
-function buildClaim(question: Question, answer: AnswerValue, note: string | undefined) {
+function buildClaim(question: Question, answer: AnswerValue, note: string | undefined, options: DocumentOptions) {
   const selected = question[answer];
   const references = dedupe(selected.proofTexts).slice(0, DEFAULT_SECTION_REFERENCE_LIMIT);
-  const referenceText = formatReferenceList(references);
+  const referenceText = options.includeReferences ? formatReferenceList(references) : "";
   const qualifier = note ? ` I would qualify this by saying: ${ensureSentence(note)}` : "";
   const template = QUESTION_STATEMENTS[question.id];
   const baseStatement =
@@ -145,7 +145,7 @@ function buildClaim(question: Question, answer: AnswerValue, note: string | unde
   } satisfies GeneratedClaim;
 }
 
-function buildGroupClaims(group: SectionGroupBlueprint, answers: AnswersMap, notes: NotesMap) {
+function buildGroupClaims(group: SectionGroupBlueprint, answers: AnswersMap, notes: NotesMap, options: DocumentOptions) {
   return group.questionIds
     .map((questionId) => QUESTION_LOOKUP.get(questionId))
     .filter((question): question is Question => Boolean(question))
@@ -155,17 +155,23 @@ function buildGroupClaims(group: SectionGroupBlueprint, answers: AnswersMap, not
         return null;
       }
 
-      return buildClaim(question, answer, notes[question.id]?.trim());
+      return buildClaim(question, answer, notes[question.id]?.trim(), options);
     })
     .filter((claim): claim is GeneratedClaim => Boolean(claim));
 }
 
-function buildSectionBody(sectionBlueprint: SectionBlueprint, answers: AnswersMap, notes: NotesMap, format: DocumentFormat) {
+function buildSectionBody(
+  sectionBlueprint: SectionBlueprint,
+  answers: AnswersMap,
+  notes: NotesMap,
+  format: DocumentFormat,
+  options: DocumentOptions,
+) {
   const blocks: string[] = [];
   const referencesUsed: string[] = [];
 
   sectionBlueprint.groups.forEach((group) => {
-    const claims = buildGroupClaims(group, answers, notes);
+    const claims = buildGroupClaims(group, answers, notes, options);
     if (claims.length === 0) {
       return;
     }
@@ -210,10 +216,16 @@ export function collectSelectedReferences(answers: AnswersMap) {
   );
 }
 
-export function generateDocumentDraft(answers: AnswersMap, notes: NotesMap, format: DocumentFormat) {
+export function generateDocumentDraft(
+  answers: AnswersMap,
+  notes: NotesMap,
+  format: DocumentFormat,
+  options: DocumentOptions = DEFAULT_DOCUMENT_OPTIONS,
+) {
+  const normalizedOptions = normalizeDocumentOptions(options);
   const generatedAt = new Date().toISOString();
   const sections = SECTION_BLUEPRINTS.map((sectionBlueprint) => {
-    const sectionContent = buildSectionBody(sectionBlueprint, answers, notes, format);
+    const sectionContent = buildSectionBody(sectionBlueprint, answers, notes, format, normalizedOptions);
     return {
       title: sectionBlueprint.title,
       intro: sectionBlueprint.intro,
@@ -225,6 +237,7 @@ export function generateDocumentDraft(answers: AnswersMap, notes: NotesMap, form
   return {
     title: GENERATED_DOCUMENT_TITLE,
     format,
+    options: normalizedOptions,
     generatedAt,
     sections,
   } satisfies GeneratedDocument;
@@ -236,6 +249,7 @@ export function serializeDocumentToMarkdown(document: GeneratedDocument) {
     `# ${title}`,
     "",
     `- Format: ${document.format === "outline" ? "Bullet Outline" : "Paragraph Draft"}`,
+    `- Verse references: ${document.options.includeReferences ? "Included" : "Hidden"}`,
     `- Generated: ${new Date(document.generatedAt).toLocaleString()}`,
   ];
 

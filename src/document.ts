@@ -461,7 +461,7 @@ export async function resolveVerseTexts(references: string[], translation = DEFA
 
 assertValidDocumentConfiguration(workbook, SECTION_BLUEPRINTS, QUESTION_STATEMENTS);
 
-export { GENERATED_DOCUMENT_TITLE, normalizeDocumentFormat, normalizeGeneratedDocumentTitle } from "./document-core";
+export { DEFAULT_DOCUMENT_OPTIONS, GENERATED_DOCUMENT_TITLE, normalizeDocumentFormat, normalizeDocumentOptions, normalizeGeneratedDocumentTitle } from "./document-core";
 export * from "./document-generation";
 export * from "./document-types";
 export * from "./verse-translations";

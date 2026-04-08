@@ -1,12 +1,15 @@
 import { useEffect, useMemo, useState } from "react";
 import { AlertCircle, ChevronDown, ChevronUp, FileText, Loader2, Menu } from "lucide-react";
 import {
+  DEFAULT_DOCUMENT_OPTIONS,
   generateDocumentDraft,
   normalizeDocumentFormat,
+  normalizeDocumentOptions,
   normalizeGeneratedDocumentTitle,
   serializeDocumentToMarkdown,
   type DocumentFormat,
   type GeneratedDocument,
+  type DocumentOptions,
 } from "./document";
 import { questions, workbook } from "./data";
 import { GeneratedDocumentWorkspace } from "./components/GeneratedDocumentWorkspace";
@@ -37,6 +40,7 @@ const ANSWERS_STORAGE_KEY = "theology-answers";
 const NOTES_STORAGE_KEY = "theology-notes";
 const DOCUMENT_STORAGE_KEY = "theology-document-draft";
 const FORMAT_STORAGE_KEY = "theology-document-format";
+const DOCUMENT_OPTIONS_STORAGE_KEY = "theology-document-options";
 const VERSE_TRANSLATION_STORAGE_KEY = "theology-verse-translation";
 
 const slugify = (text: string) => text.toLowerCase().replace(/[^a-z0-9]+/g, "-");
@@ -63,10 +67,11 @@ function readDocumentDraftFromStorage(): GeneratedDocument | null {
   }
   const title = normalizeGeneratedDocumentTitle(raw.title);
   const format = normalizeDocumentFormat((raw as GeneratedDocument & { format?: string }).format);
-  if (title === raw.title && format === raw.format) {
+  const options = normalizeDocumentOptions((raw as GeneratedDocument & { options?: Partial<DocumentOptions> }).options);
+  if (title === raw.title && format === raw.format && JSON.stringify(options) === JSON.stringify(raw.options ?? null)) {
     return raw;
   }
-  return { ...raw, title, format };
+  return { ...raw, title, format, options };
 }
 
 function getViewFromLocation(): AppView {
@@ -110,6 +115,9 @@ export default function App() {
     const saved = localStorage.getItem(FORMAT_STORAGE_KEY);
     return normalizeDocumentFormat(saved);
   });
+  const [documentOptions, setDocumentOptions] = useState<DocumentOptions>(() =>
+    normalizeDocumentOptions(readStorage<Partial<DocumentOptions>>(DOCUMENT_OPTIONS_STORAGE_KEY, DEFAULT_DOCUMENT_OPTIONS)),
+  );
   const [verseTranslation, setVerseTranslation] = useState<VerseTranslationCode>(() =>
     normalizeVerseTranslation(localStorage.getItem(VERSE_TRANSLATION_STORAGE_KEY)),
   );
@@ -134,6 +142,10 @@ export default function App() {
   useEffect(() => {
     localStorage.setItem(FORMAT_STORAGE_KEY, selectedFormat);
   }, [selectedFormat]);
+
+  useEffect(() => {
+    localStorage.setItem(DOCUMENT_OPTIONS_STORAGE_KEY, JSON.stringify(documentOptions));
+  }, [documentOptions]);
 
   useEffect(() => {
     localStorage.setItem(VERSE_TRANSLATION_STORAGE_KEY, verseTranslation);
@@ -251,7 +263,7 @@ export default function App() {
     setIsGeneratingDocument(true);
 
     try {
-      const generatedDocument = generateDocumentDraft(answers, notes, selectedFormat);
+      const generatedDocument = generateDocumentDraft(answers, notes, selectedFormat, documentOptions);
       setDocumentDraft(generatedDocument);
       setIsGenerateDialogOpen(false);
       navigateToDocument();
@@ -296,6 +308,8 @@ export default function App() {
           documentDraft={documentDraft}
           pendingFormat={selectedFormat}
           onPendingFormatChange={setSelectedFormat}
+          pendingIncludeReferences={documentOptions.includeReferences}
+          onPendingIncludeReferencesChange={(includeReferences) => setDocumentOptions((prev) => ({ ...prev, includeReferences }))}
           onUpdateSection={handleUpdateSection}
           onBackToWorkbook={navigateToQuestionnaire}
           onRegenerate={handleOpenGenerateDialog}
@@ -323,6 +337,15 @@ export default function App() {
                   <option value="paragraph">Paragraph Draft</option>
                   <option value="outline">Bullet Outline</option>
                 </select>
+              </label>
+              <label className="flex items-start gap-3 rounded-md border border-slate-200 bg-slate-50 px-3 py-3 text-sm text-slate-700">
+                <input
+                  type="checkbox"
+                  checked={documentOptions.includeReferences}
+                  onChange={(event) => setDocumentOptions((prev) => ({ ...prev, includeReferences: event.target.checked }))}
+                  className="mt-0.5 h-4 w-4 rounded border-slate-300"
+                />
+                <span>Include verse references inline in the generated report.</span>
               </label>
             </div>
             <DialogFooter>
@@ -599,7 +622,16 @@ export default function App() {
                 <option value="outline">Bullet Outline</option>
               </select>
             </label>
-            <p className="text-sm text-slate-500">The generated draft will keep statement references only and will not pull verse text from external APIs.</p>
+            <label className="flex items-start gap-3 rounded-md border border-slate-200 bg-slate-50 px-3 py-3 text-sm text-slate-700">
+              <input
+                type="checkbox"
+                checked={documentOptions.includeReferences}
+                onChange={(event) => setDocumentOptions((prev) => ({ ...prev, includeReferences: event.target.checked }))}
+                className="mt-0.5 h-4 w-4 rounded border-slate-300"
+              />
+              <span>Include verse references inline in the generated report.</span>
+            </label>
+            <p className="text-sm text-slate-500">The generated draft will only use verse references, not verse text fetched from external APIs.</p>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsGenerateDialogOpen(false)} disabled={isGeneratingDocument}>

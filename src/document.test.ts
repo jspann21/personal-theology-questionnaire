@@ -25,6 +25,7 @@ describe("document generation", () => {
     expect(draft.sections).toHaveLength(workbook.sections.length);
     expect(draft.sections.every((section) => section.body.trim().length > 0)).toBe(true);
     expect(draft.sections.some((section) => section.body.includes("sample qualifier"))).toBe(true);
+    expect(draft.options.includeReferences).toBe(true);
   });
 
   it("serializes outline drafts with markdown headings", () => {
@@ -34,6 +35,16 @@ describe("document generation", () => {
     expect(markdown).toContain("# Personal Systematic Theology Statement");
     expect(markdown).toContain("## Scripture And Revelation");
     expect(markdown).toContain("- Format: Bullet Outline");
+    expect(markdown).toContain("- Verse references: Included");
+  });
+
+  it("can generate reports without inline verse references", () => {
+    const draft = generateDocumentDraft(buildAnswers("yes"), {}, "paragraph", { includeReferences: false });
+    const firstSection = draft.sections.find((section) => section.title === "Scripture And Revelation");
+
+    expect(firstSection?.body).toContain("I affirm Sola Scriptura and hold that Scripture alone is the final infallible norm for doctrine and practice.");
+    expect(firstSection?.body).not.toContain("Isa 8:20");
+    expect(firstSection?.referencesUsed).toContain("Isaiah 8:20");
   });
 
   it("collects unique references from selected answers", () => {
