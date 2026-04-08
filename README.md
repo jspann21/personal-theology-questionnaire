@@ -12,7 +12,7 @@ At its core is a guided workbook covering 20 major areas of systematic theology 
 
 The app then uses those answers to generate a personal theology draft that can be revised into a more polished final statement.
 
-If you want to see the end result before filling anything out, open the static sample page at [sample-report.html](./sample-report.html). It renders both final output formats from a fixed set of simulated answers.
+If you want to see the end result before filling anything out, open the static sample page at [sample-report.html](https://jspann21.github.io/personal-theology-questionnaire/sample-report.html). It renders both final output formats from a fixed set of simulated answers.
 
 ## What Makes It Useful
 
@@ -86,5 +86,5 @@ This repository also includes:
 
 - [systematic-theology-questionnaire-workbook.md](./systematic-theology-questionnaire-workbook.md), a full reading and printing version of the workbook
 - [personal-theology-build-guide.md](./personal-theology-build-guide.md), a guide for turning completed answers into a stronger final theology statement
-- [sample-report.html](./sample-report.html), a static sample page showing the generated final report in both formats from simulated answers
+- [sample-report.html](https://jspann21.github.io/personal-theology-questionnaire/sample-report.html), a static sample page showing the generated final report in both formats from simulated answers
 - [questionnaire-workbook-sections](./questionnaire-workbook-sections/), the workbook source files organized by doctrinal section
